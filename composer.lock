@@ -2,9 +2,10 @@
     "_readme": [
         "This file locks the dependencies of your project to a known state",
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "Modified by BW-Tech GmbH for owncloud.online PHP 8.4 compatibility",
         "This file is @generated automatically"
     ],
-    "content-hash": "db235c90ce8ef9f6bd0c002ad9cee268",
+    "content-hash": "5b04be737fd34e7e6c9843832f901d63",
     "packages": [],
     "packages-dev": [
         {
@@ -1103,11 +1104,11 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.3"
+        "php": ">=8.4"
     },
-    "platform-dev": [],
+    "platform-dev": {},
     "platform-overrides": {
-        "php": "8.3"
+        "php": "8.4"
     },
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
