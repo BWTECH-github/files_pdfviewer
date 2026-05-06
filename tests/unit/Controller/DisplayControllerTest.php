@@ -6,6 +6,8 @@
  * This file is licensed under the Affero General Public License version 3 or
  * later.
  * See the COPYING-README file.
+ *
+ * Modified by BW-Tech GmbH for owncloud.online PHP 8.4 compatibility.
  */
 
 namespace OCA\Files_PdfViewer\Controller;
@@ -15,6 +17,8 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 use OCP\IURLGenerator;
+use OCP\Share\IAttributes;
+use OCP\Share\IShare;
 use OCP\Share\IManager;
 use Test\TestCase;
 
@@ -82,6 +86,59 @@ class DisplayControllerTest extends TestCase {
 		$this->request->expects($this->once())->method('getParams')->willReturn(['path' => 'test.txt']);
 		$storage = $this->createMock('\OCP\Files\Storage');
 		$this->controller->expects($this->once())->method('getStorage')->willReturn($storage);
+
+		$expectedResponse = new JSONResponse(['canDownload' => true]);
+		$this->assertEquals($expectedResponse, $this->controller->canDownload());
+	}
+
+	public function testCanDownloadReturnsFalseWithoutStorage() {
+		$this->request->expects($this->once())->method('getParams')->willReturn([]);
+		$this->controller->expects($this->once())->method('getStorage')->willReturn(null);
+
+		$expectedResponse = new JSONResponse(['canDownload' => false]);
+		$this->assertEquals($expectedResponse, $this->controller->canDownload());
+	}
+
+	public function testCanDownloadPublicShareWithDownloadDisabled() {
+		$this->request->expects($this->once())->method('getParams')->willReturn(['sharingToken' => 'token']);
+		$this->controller->expects($this->never())->method('getStorage');
+
+		$attributes = $this->createMock(IAttributes::class);
+		$attributes->expects($this->once())->method('getAttribute')->with('permissions', 'download')->willReturn(false);
+
+		$share = $this->createMock(IShare::class);
+		$share->expects($this->once())->method('getAttributes')->willReturn($attributes);
+
+		$this->shareManager->expects($this->once())->method('getShareByToken')->with('token')->willReturn($share);
+
+		$expectedResponse = new JSONResponse(['canDownload' => false]);
+		$this->assertEquals($expectedResponse, $this->controller->canDownload());
+	}
+
+	public function testCanDownloadPublicShareWithDownloadAllowedByDefault() {
+		$this->request->expects($this->once())->method('getParams')->willReturn(['sharingToken' => 'token']);
+		$this->controller->expects($this->never())->method('getStorage');
+
+		$attributes = $this->createMock(IAttributes::class);
+		$attributes->expects($this->once())->method('getAttribute')->with('permissions', 'download')->willReturn(null);
+
+		$share = $this->createMock(IShare::class);
+		$share->expects($this->once())->method('getAttributes')->willReturn($attributes);
+
+		$this->shareManager->expects($this->once())->method('getShareByToken')->with('token')->willReturn($share);
+
+		$expectedResponse = new JSONResponse(['canDownload' => true]);
+		$this->assertEquals($expectedResponse, $this->controller->canDownload());
+	}
+
+	public function testCanDownloadPublicShareWithoutAttributes() {
+		$this->request->expects($this->once())->method('getParams')->willReturn(['sharingToken' => 'token']);
+		$this->controller->expects($this->never())->method('getStorage');
+
+		$share = $this->createMock(IShare::class);
+		$share->expects($this->once())->method('getAttributes')->willReturn(null);
+
+		$this->shareManager->expects($this->once())->method('getShareByToken')->with('token')->willReturn($share);
 
 		$expectedResponse = new JSONResponse(['canDownload' => true]);
 		$this->assertEquals($expectedResponse, $this->controller->canDownload());

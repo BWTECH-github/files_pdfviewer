@@ -6,6 +6,8 @@
  * This file is licensed under the Affero General Public License version 3 or
  * later.
  * See the COPYING-README file.
+ *
+ * Modified by BW-Tech GmbH for owncloud.online PHP 8.4 compatibility.
  */
 
 namespace OCA\Files_PdfViewer\Controller;
@@ -75,8 +77,18 @@ class DisplayController extends Controller {
 
 	public function canDownload() {
 		$canDownload = true;
+		$params = $this->request->getParams();
 
-		$storage = $this->getStorage($this->request->getParams());
+		if (!empty($params['sharingToken'])) {
+			return new JSONResponse([
+				'canDownload' => $this->canDownloadShareByToken($params['sharingToken'])
+			]);
+		}
+
+		$storage = $this->getStorage($params);
+		if ($storage === null) {
+			return new JSONResponse(['canDownload' => false]);
+		}
 
 		if (!$storage->instanceOfStorage('OCA\Files_Sharing\SharedStorage')) {
 			return new JSONResponse(['canDownload' => $canDownload]);
@@ -85,22 +97,50 @@ class DisplayController extends Controller {
 		/** @var \OCA\Files_Sharing\SharedStorage $storage */
 		'@phan-var \OCA\Files_Sharing\SharedStorage $storage';  /* @phpstan-ignore-line */
 		$share = $storage->getShare();
-		$downloadPermission = $share->getAttributes()->getAttribute('permissions', 'download');
-
-		if ($downloadPermission !== null && !$downloadPermission) {
-			$canDownload = false;
-		}
+		$canDownload = $this->canDownloadShare($share);
 
 		return new JSONResponse(['canDownload' => $canDownload]);
 	}
 
-	protected function getStorage($params) {
-		if (isset($params['sharingToken'])) {
-			$share = $this->shareManager->getShareByToken($params['sharingToken']);
-			return $share->getNode()->getStorage();
+	private function canDownloadShareByToken($token) {
+		try {
+			$share = $this->shareManager->getShareByToken($token);
+			return $this->canDownloadShare($share);
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
+	private function canDownloadShare($share) {
+		$attributes = $share->getAttributes();
+		if ($attributes === null) {
+			return true;
 		}
 
-		$fileInfo =  Filesystem::getFileInfo($params['path']);
-		return $fileInfo->getStorage();
+		$downloadPermission = $attributes->getAttribute('permissions', 'download');
+
+		return $downloadPermission === null || $downloadPermission === true;
+	}
+
+	protected function getStorage($params) {
+		try {
+			if (!empty($params['sharingToken'])) {
+				$share = $this->shareManager->getShareByToken($params['sharingToken']);
+				return $share->getNode()->getStorage();
+			}
+
+			if (empty($params['path'])) {
+				return null;
+			}
+
+			$fileInfo = Filesystem::getFileInfo($params['path']);
+			if ($fileInfo === null || $fileInfo === false) {
+				return null;
+			}
+
+			return $fileInfo->getStorage();
+		} catch (\Throwable $e) {
+			return null;
+		}
 	}
 }
