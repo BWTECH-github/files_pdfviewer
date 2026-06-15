@@ -198,3 +198,22 @@ html .doorHangerRight:before {
   right: 53px!important;
 }
 
+/* WCAG 2.4.7 / 1.4.11: sichtbarer Fokusring fuer Tastaturnutzer.
+   Die gebuendelte viewer.css setzt global `outline: none` und ersetzt
+   den Fokus nur durch einen Hover-Tint (Kontrast < 3:1). Hier wird ein
+   eigenstaendiger, kontraststarker Fokusindikator (>=3:1) wiederhergestellt,
+   getrennt vom Hover-Zustand. */
+.toolbarButton:focus-visible,
+.secondaryToolbarButton:focus-visible,
+.overlayButton:focus-visible,
+.dropdownToolbarButton:focus-visible,
+.treeItemToggler:focus-visible,
+.toolbarField:focus-visible,
+#password:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #0a84ff;
+  outline-offset: 1px;
+}
+

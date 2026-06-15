@@ -333,7 +333,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 					<p id="passwordText" data-l10n-id="password_label">Enter the password to open this PDF file:</p>
 				</div>
 				<div class="row">
-					<input type="password" id="password" class="toolbarField">
+					<input type="password" id="password" class="toolbarField" aria-labelledby="passwordText">
 				</div>
 				<div class="buttonRow">
 					<button id="passwordCancel" class="overlayButton"><span data-l10n-id="password_cancel">Cancel</span></button>
