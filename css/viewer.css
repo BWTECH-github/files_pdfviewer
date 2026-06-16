@@ -217,3 +217,18 @@ select:focus-visible {
   outline-offset: 1px;
 }
 
+/* WCAG 1.4.11 Non-Text-Kontrast: Der Ruhe-Rahmen der Eingabefelder
+   (Suche, Seitenzahl, Passwort, Zoom-Select) nutzt in der gebuendelten
+   viewer.css `--field-border-color: rgb(187,187,188)` = nur ~1,9:1 gegen
+   den weissen Feld-/Toolbar-Hintergrund. Hier wird die Feldgrenze im
+   Light-Mode auf #767676 (>=4,5:1 gegen Weiss) angehoben, damit die Felder
+   als Bedienelemente erkennbar sind. Dark-Mode (eigener dunkler Wert) und
+   forced-colors (ButtonText) bleiben unangetastet. */
+@media not all and (prefers-color-scheme: dark) {
+  @media not all and (forced-colors: active) {
+    .toolbarField {
+      border-color: #767676;
+    }
+  }
+}
+
