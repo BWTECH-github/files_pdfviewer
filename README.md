@@ -12,7 +12,6 @@ Modified by BW-Tech GmbH for owncloud.online. This fork keeps the original ownCl
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=owncloud_files_pdfviewer&metric=coverage)](https://sonarcloud.io/dashboard?id=owncloud_files_pdfviewer)
 [![Build Status](https://drone.owncloud.com/api/badges/owncloud/files_pdfviewer/status.svg?branch=master)](https://drone.owncloud.com/owncloud/files_pdfviewer)
 
-
 Instructions to update pdfjs
 ===========
 1. Prerequisites
@@ -29,7 +28,6 @@ Instructions to update pdfjs
 5. Check if `templates/viewer.php` needs to be updated to match `js/vendor/pdfjs/web/viewer.html`
 
 6. Test the app ;)
-
 
 Maintainers
 ===========
