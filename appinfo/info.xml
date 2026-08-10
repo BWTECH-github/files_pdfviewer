@@ -21,10 +21,10 @@ Modified by BW-Tech GmbH for owncloud.online and PHP 8.4 compatibility.
     </dependencies>
     <default_enable/>
     <namespace>Files_PdfViewer</namespace>
-    <website>https://github.com/GrossLukas/files_pdfviewer</website>
-    <bugs>https://github.com/GrossLukas/files_pdfviewer/issues</bugs>
+    <website>https://github.com/BWTECH-github/files_pdfviewer</website>
+    <bugs>https://github.com/BWTECH-github/files_pdfviewer/issues</bugs>
     <category>productivity</category>
-    <repository type="git">https://github.com/GrossLukas/files_pdfviewer.git</repository>
+    <repository type="git">https://github.com/BWTECH-github/files_pdfviewer.git</repository>
     <screenshot>https://github.com/owncloud/screenshots/raw/cd5f83007e6037af6733d847548d2766be69a8a0/files_pdfviewer/files_pdfviewer.png</screenshot>
     <ocsid>166049</ocsid>
 </info>
