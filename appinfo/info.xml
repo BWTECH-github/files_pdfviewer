@@ -5,7 +5,7 @@
     <name>PDF Viewer</name>
     <summary>Viewer for PDF files</summary>
     <description>
-This application integrates a browser-based PDF Viewer into ownCloud. It allows users to view their PDF files in the browser without the need to download the file.
+This application integrates a browser-based PDF Viewer into owncloud.online. It allows users to view their PDF files in the browser without the need to download the file.
 
 When this application is enabled, publicly shared PDF documents will also be shown in the PDF Viewer. The PDF viewer requires a modern browser and will not work with Microsoft® Internet Explorer® and older (non-Chromium-based) versions of Microsoft Edge®.
 The integration is based on PDF.js which is a JavaScript library developed by Mozilla. You can learn more about the PDF.js project at https://mozilla.github.io/pdf.js/
@@ -21,10 +21,9 @@ Modified by BW-Tech GmbH for owncloud.online and PHP 8.4 compatibility.
     </dependencies>
     <default_enable/>
     <namespace>Files_PdfViewer</namespace>
-    <website>https://github.com/BWTECH-github/files_pdfviewer</website>
+    <website>https://owncloud.online</website>
     <bugs>https://github.com/BWTECH-github/files_pdfviewer/issues</bugs>
     <category>productivity</category>
     <repository type="git">https://github.com/BWTECH-github/files_pdfviewer.git</repository>
-    <screenshot>https://github.com/owncloud/screenshots/raw/cd5f83007e6037af6733d847548d2766be69a8a0/files_pdfviewer/files_pdfviewer.png</screenshot>
     <ocsid>166049</ocsid>
 </info>
