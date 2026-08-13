@@ -14,7 +14,7 @@ Modified by BW-Tech GmbH for owncloud.online and PHP 8.4 compatibility.
     </description>
     <licence>AGPL</licence>
     <author>ownCloud contributors, modified by BW-Tech GmbH</author>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
     <dependencies>
         <owncloud min-version="11" max-version="11.99" />
         <php min-version="8.4" />
