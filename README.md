@@ -56,5 +56,6 @@ Nur für die Entwicklung. Nötig sind `npm`, `bower` und `gulp`.
 
 ## Herkunft
 
-Fork der gleichnamigen ownCloud-App, gepflegt von der BW-Tech GmbH für
-owncloud.online und PHP 8.4. Lizenz: AGPLv3.
+Fork einer quelloffenen App gleichen Namens (Lizenz: AGPLv3); die
+ursprünglichen Urheberrechtsvermerke bleiben in den Quelldateien erhalten.
+Gepflegt von der BW-Tech GmbH für owncloud.online und PHP 8.4.

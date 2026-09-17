@@ -13,5 +13,25 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    uses: owncloud/reusable-workflows/.github/workflows/build.yml@main
+  appstore:
+    name: Build appstore tarball
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Kein PHP/Composer nötig: "make appstore" kopiert nur appinfo, lib,
+      # templates, l10n, css, img, js, README.md und CHANGELOG.md (kein vendor/)
+      # und signiert nur, wenn Schlüssel und occ vorhanden sind – im CI nie.
+      # Den Paketnamen leitet das Makefile aus dem Checkout-Verzeichnis ab
+      # (= Repository-Name "files_pdfviewer", identisch mit der App-ID).
+      - name: Build appstore tarball
+        run: make appstore
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: files_pdfviewer-appstore
+          path: build/artifacts/appstore/files_pdfviewer.tar.gz
+          if-no-files-found: error

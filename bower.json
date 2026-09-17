@@ -1,12 +1,12 @@
 {
   "name": "files_pdfviewer",
-  "homepage": "https://github.com/owncloud/files_pdfviewer",
+  "homepage": "https://github.com/BWTECH-github/files_pdfviewer",
   "authors": [
     "Victor Dubiniuk <dubiniuk@owncloud.com>",
     "Jan Ackermann <jackermann@owncloud.com>",
     "Jannik Stehle <jstehle@owncloud.com>"
   ],
-  "description": "ownCloud pdf viewer app",
+  "description": "PDF viewer app for owncloud.online",
   "main": "",
   "license": "AGPL",
   "private": true,
