@@ -43,6 +43,12 @@ CVE-2024-4367 aktiv.
   Verweise auf Fehlerbereich, Repository und Dokumentation zeigen auf das eigene
   Repository. Screenshots aus fremden Repositories entfernt.
 
+## [2.0.1] - 2026-09-22
+
+### Fixed
+
+- Redesign: Der PDF-Rahmen deckt wie der Media Viewer das ganze Fenster ab. Vorher blieben Kopfleiste und die klebende Ordner-Kopfzeile der Dateiliste über dem Dokument stehen.
+
 ## [Unreleased] 
 
 -

@@ -143,6 +143,24 @@
 				$('.directLink').addClass('hidden');
 				$('.directDownload').addClass('hidden');
 				$('#controls').addClass('hidden');
+			} else if (document.body.classList.contains('oco-shell')) {
+				// Redesign-Schale: als absolutes Kind von #app-content lag der
+				// Rahmen unter der 64-px-Kopfleiste, und die klebende
+				// Ordner-Kopfzeile der Dateiliste (Name, „n Einträge“) blieb
+				// über dem Dokument stehen. Der Rahmen deckt jetzt wie der
+				// Media Viewer (z-index 2850) das ganze Fenster ab; Schließen
+				// wie bisher über das Kreuz der Werkzeugleiste oder Escape.
+				$iframe.css({
+					position: 'fixed',
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					width: '100%',
+					height: '100%',
+					zIndex: 2850
+				});
+				$('body').append($iframe);
 			} else {
 				$('#app-content').append($iframe);
 			}
