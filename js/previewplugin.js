@@ -34,15 +34,35 @@
 			this._extendFileActions(fileList.fileActions);
 		},
 
-		hide: function () {
+		/**
+		 * Dateiliste, aus der der Betrachter geöffnet wurde. Das globale
+		 * FileList taugt dafür nicht: Im Redesign ist es nach einem
+		 * Ansichtswechsel null, beim direkten Einstieg über ?view=… der
+		 * DOM-Konstruktor FileList des Browsers (ohne setViewerMode).
+		 */
+		_fileList: null,
+
+		/**
+		 * @param {boolean} [listeWirdAbgebaut] true beim Wechsel der Dateiansicht:
+		 *        Die alte Liste wird gerade abgebaut, setViewerMode darauf würfe
+		 *        (Zusammenfassung und Detailansicht sind schon weg).
+		 */
+		hide: function (listeWirdAbgebaut) {
 			$('#pdframe').remove();
+			// Handler dieses Betrachters abräumen (sonst sammeln sie sich an)
+			$(window).off('popstate.pdfviewer');
+			$(document).off('keyup.pdfviewer');
+			$('#app-navigation').off('itemChanged.pdfviewer');
 			if ($('#isPublic').val() && $('#filesApp').val()) {
 				$('#controls').removeClass('hidden');
 				$('#content').removeClass('full-height');
 				$('footer').removeClass('hidden');
 			}
 
-			FileList.setViewerMode(false);
+			if (listeWirdAbgebaut !== true && this._fileList && typeof this._fileList.setViewerMode === 'function') {
+				this._fileList.setViewerMode(false);
+			}
+			this._fileList = null;
 			// replace the controls with our own
 			$('#app-content #controls').removeClass('hidden');
 		},
@@ -50,9 +70,11 @@
 		/**
 		 * @param fileName
 		 * @param dir
+		 * @param fileList Dateiliste aus dem Kontext der Dateiaktion
 		 */
-		show: function (fileName, dir) {
+		show: function (fileName, dir, fileList) {
 			var self = this;
+			this._fileList = fileList || null;
 			var downloadUrl = this._getDownloadUrl(fileName, dir);
 			var sharingToken = $("#sharingToken").val();
 			var uri = 'apps/files_pdfviewer/candownload?path={path}';
@@ -88,11 +110,26 @@
 			});
 			$iframe = $('<iframe id="pdframe" style="width:100%;height:100%;display:block;position:absolute;top:0;z-index:10;" src="' + viewer + '" sandbox="allow-downloads allow-scripts allow-same-origin allow-popups allow-modals allow-top-navigation" />');
 
-			if (isFileList === true) {
-				FileList.setViewerMode(true);
+			if (isFileList === true && this._fileList && typeof this._fileList.setViewerMode === 'function') {
+				this._fileList.setViewerMode(true);
 			}
 
 			if ($('#isPublic').val()) {
+				// Auf den Linkseiten hat die Vorschau-Karte keine feste Höhe mehr
+				// (Redesign: 640 px breite Karte, Kopfleiste im Fluss). Ein
+				// iframe mit height:100% schrumpfte dort auf 70 bis 270 px. Er
+				// liegt deshalb fest unter der Kopfleiste und füllt den Rest.
+				var kopf = $('#header').get(0);
+				var oben = kopf ? Math.max(0, Math.round(kopf.getBoundingClientRect().bottom)) : 0;
+				$iframe.css({
+					position: 'fixed',
+					top: oben + 'px',
+					left: 0,
+					right: 0,
+					bottom: 0,
+					width: '100%',
+					height: 'calc(100% - ' + oben + 'px)'
+				});
 				// force the preview to adjust its height
 				$('#preview').append($iframe).css({
 					height: '100%'
@@ -129,15 +166,22 @@
 			});
 
 
-			$(document).keyup(function (e) {
+			$(document).off('keyup.pdfviewer').on('keyup.pdfviewer', function (e) {
 				if (isPdfVisible && e.keyCode == 27) {
 					isPdfVisible = false;
 					history.back();
 				}
 			});
 
+			// Wechsel der Dateiansicht bei offenem Betrachter: schließen, sonst
+			// bliebe er über der neuen Ansicht liegen
+			$('#app-navigation').off('itemChanged.pdfviewer').one('itemChanged.pdfviewer', function () {
+				isPdfVisible = false;
+				self.hide(true);
+			});
+
 			setTimeout(function () {
-				$(window).one('popstate', function (e) {
+				$(window).off('popstate.pdfviewer').one('popstate.pdfviewer', function (e) {
 					self.hide();
 				});
 			}, 0);
@@ -160,7 +204,10 @@
 					path: dir
 				});
 			} else {
-				downloadUrl = Files.getDownloadUrl(fileName, dir);
+				// wie oben: die Dateiliste der Aktion statt des globalen Objekts
+				downloadUrl = (this._fileList && typeof this._fileList.getDownloadUrl === 'function')
+					? this._fileList.getDownloadUrl(fileName, dir)
+					: OCA.Files.Files.getDownloadUrl(fileName, dir);
 			}
 
 			return downloadUrl;
@@ -179,7 +226,7 @@
 				iconClass: 'icon-toggle',
 				permissions: OC.PERMISSION_READ,
 				actionHandler: function (fileName, context) {
-					self.show(fileName, context.dir);
+					self.show(fileName, context.dir, context.fileList);
 				}
 			});
 			fileActions.setDefault('application/pdf', 'FilesPdfViewer');

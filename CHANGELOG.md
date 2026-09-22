@@ -4,14 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [2.0.0] - 2026-09-17
+## [2.0.0] - 2026-09-22
 
 Redesign-Linie (owncloud.online Redesign 11.1). Nur im Zweig `redesign`.
-Keine Änderung am Betrachter nötig: im Redesign-Kern Ende zu Ende geprüft
-(tests/visual/pruefe-pdfviewer.js, 18/18) – Öffnen aus der Dateiliste,
-Blättern, Vergrößern, Suche, Herunterladen, Drucken, Schließen per Knopf und
-Escape, öffentlicher Link auf Datei und Ordner, Freigabe ohne Download-Recht
-(Hinweis statt Betrachter), 400 px, Schutz gegen CVE-2024-4367 aktiv.
+Im Redesign-Kern Ende zu Ende geprüft (tests/visual/pruefe-pdfviewer.js,
+27/27) – Öffnen aus der Dateiliste und aus Favoriten und "Per Link geteilt"
+(direkt und nach Ansichtswechsel), Blättern, Vergrößern, Suche,
+Herunterladen, Drucken, Schließen per Knopf und Escape, Ansichtswechsel bei
+offenem Betrachter, öffentlicher Link auf Datei und Ordner mit Größenmessung,
+Freigabe ohne Download-Recht (Hinweis statt Betrachter), 400 px, Schutz gegen
+CVE-2024-4367 aktiv.
+
+### Fixed
+
+- Außerhalb von "Alle Dateien" öffnete der Betrachter nicht (Favoriten,
+  Geteilt, Links, Tags): Er arbeitete mit dem globalen `FileList`, das im
+  Redesign nach einem Ansichtswechsel `null` ist und beim direkten Einstieg
+  über `?view=…` der DOM-Konstruktor des Browsers. Jetzt die Dateiliste aus
+  dem Kontext der Dateiaktion.
+- Öffentliche Links: Der Betrachter schrumpfte in der Vorschau-Karte auf
+  70 px (Ordner) bzw. 638×270 px (Datei). Er liegt jetzt fest unter der
+  Kopfleiste und nutzt die ganze Fläche.
+- Ansichtswechsel bei offenem Betrachter: Er blieb über der neuen Ansicht
+  liegen, das Schließen warf einen TypeError. Jetzt schließt er beim Wechsel;
+  Tastatur-, Verlaufs- und Navigationshandler räumen sich ab, statt sich bei
+  jedem Öffnen anzusammeln.
 
 ### Changed
 

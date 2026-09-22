@@ -12,8 +12,12 @@
  *     Herunterladen (echter Download), Drucken vorhanden
  *   - Schutz gegen CVE-2024-4367 aktiv (isEvalSupported=false)
  *   - Schließen per Knopf und per Escape führt zurück zur Liste
- *   - öffentlicher Link auf die PDF: Betrachter öffnet sofort, ohne Schließen
- *   - öffentlicher Link auf den Ordner: Klick öffnet den Betrachter
+ *   - Favoriten (direkt und nach Ansichtswechsel), "Per Link geteilt":
+ *     Klick öffnet, Escape schließt ohne Fehler
+ *   - Ansichtswechsel bei offenem Betrachter schließt ihn ohne Fehler
+ *   - öffentlicher Link auf die PDF: Betrachter öffnet sofort, ohne Schließen,
+ *     und nutzt die Fläche unter der Kopfleiste
+ *   - öffentlicher Link auf den Ordner: Klick öffnet den Betrachter, ganze Fläche
  *   - Freigabe ohne Download-Recht: Hinweis statt Betrachter
  *   - 400 px: Betrachter füllt den Inhaltsbereich; keine Konsolenfehler
  *
@@ -148,7 +152,16 @@ async function zeileAnklicken(seite, name) {
 		return aus;
 	}, [pdf(['Probe Seite eins', 'Probe Seite zwei']), PROBE_NUTZER, PROBE_PASSWORT]);
 	// Konsole erst ab hier: das Aufräumen vorab erzeugt erwartete 404/400
-	admin.seite.on('console', (m) => { if (m.type() === 'error') { konsole.push('admin: ' + m.text().slice(0, 160)); } });
+	admin.seite.on('console', (m) => {
+		// Vorschaufehler fremder Dateien (etwa in "Per Link geteilt") gehören
+		// nicht zum Betrachter; sie laufen über den Vorschau-Endpunkt des Kerns
+		const quelle = m.location().url || '';
+		if (/[?&]preview=1/.test(quelle) && !/PDF-Probe/.test(quelle)) {
+			return;
+		}
+		if (m.type() === 'error') { konsole.push('admin: ' + m.text().slice(0, 160) + ' @ ' + quelle.slice(0, 100)); }
+	});
+	admin.seite.on('pageerror', (e) => konsole.push('admin Seitenfehler: ' + e.message.slice(0, 160)));
 	pruefe('Testdaten angelegt (PDF, zwei Links, Nutzer, Freigabe ohne Download)', daten.put === 201 && !!daten.linkDatei.token && !!daten.linkOrdner.token && !!daten.freigabe.id, JSON.stringify(daten));
 
 	// 1. Dateiliste
@@ -226,6 +239,64 @@ async function zeileAnklicken(seite, name) {
 		pruefe('Escape schließt den Betrachter', await admin.seite.evaluate(() => !document.getElementById('pdframe')));
 	}
 
+	// 1b. andere Dateiansichten: Favoriten (direkt und nach Wechsel), per Link geteilt
+	await admin.seite.evaluate(async () => {
+		await fetch(OC.linkToRemoteBase('dav') + '/files/admin/PDF-Probe/probe.pdf', {
+			method: 'PROPPATCH',
+			headers: { requesttoken: OC.requestToken, 'Content-Type': 'application/xml' },
+			body: '<?xml version="1.0"?><d:propertyupdate xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:set><d:prop><oc:favorite>1</oc:favorite></d:prop></d:set></d:propertyupdate>',
+		});
+	});
+	for (const [ansicht, direkt] of [['favorites', true], ['favorites', false], ['sharinglinks', true]]) {
+		if (direkt) {
+			await admin.seite.goto(BASIS + '/index.php/apps/files/?view=' + ansicht, { waitUntil: 'load' });
+		} else {
+			await admin.seite.goto(BASIS + '/index.php/apps/files/?dir=%2FPDF-Probe', { waitUntil: 'load' });
+			await admin.seite.waitForSelector('#fileList tr[data-file="probe.pdf"]', { timeout: 30000 }).catch(() => {});
+			await admin.seite.locator('#app-navigation li[data-id="' + ansicht + '"] a').first().click({ timeout: 10000 }).catch(() => {});
+			await admin.seite.waitForTimeout(1500);
+		}
+		const vorher = konsole.length;
+		// Redesign: alle Ansichten teilen sich #app-content-view; die sichtbare Liste zählt
+		const liste = '#fileList tr[data-file="probe.pdf"]:visible';
+		await admin.seite.waitForSelector(liste, { timeout: 30000 }).catch(() => {});
+		await admin.seite.locator(liste + ' .nametext').first().click({ timeout: 10000 }).catch(() => {});
+		const r = await betrachter(admin.seite).catch(() => null);
+		const seiten = r ? await r.evaluate(() => PDFViewerApplication.pagesCount) : null;
+		const fehler = konsole.slice(vorher);
+		pruefe('Ansicht "' + ansicht + '" (' + (direkt ? 'direkt' : 'nach Wechsel') + '): Klick öffnet den Betrachter', seiten === 2 && fehler.length === 0, seiten + ' ' + fehler.join(' | '));
+		if (r) {
+			await admin.seite.keyboard.press('Escape');
+			await admin.seite.waitForFunction(() => !document.getElementById('pdframe'), null, { timeout: 10000 }).catch(() => {});
+			const zu = await admin.seite.evaluate(() => !document.getElementById('pdframe'));
+			pruefe('Ansicht "' + ansicht + '" (' + (direkt ? 'direkt' : 'nach Wechsel') + '): Escape schließt ohne Fehler', zu && konsole.length === vorher, konsole.slice(vorher).join(' | '));
+		}
+	}
+
+	// 1c. Ansichtswechsel bei offenem Betrachter
+	await admin.seite.goto(BASIS + '/index.php/apps/files/?dir=%2FPDF-Probe', { waitUntil: 'load' });
+	await zeileAnklicken(admin.seite, 'probe.pdf');
+	if (await betrachter(admin.seite).catch(() => null)) {
+		const vorher = konsole.length;
+		await admin.seite.locator('#app-navigation li[data-id="favorites"] a').first().click({ timeout: 10000 }).catch(() => {});
+		await admin.seite.waitForTimeout(1500);
+		const nachWechsel = await admin.seite.evaluate(() => ({
+			rahmen: !!document.getElementById('pdframe'),
+			liste: Array.from(document.querySelectorAll('#fileList tr[data-file="probe.pdf"]')).some((z) => z.getClientRects().length > 0) && /favorites/.test(location.search),
+		}));
+		pruefe('Ansichtswechsel bei offenem Betrachter: Betrachter zu, neue Ansicht sichtbar, kein Fehler', !nachWechsel.rahmen && nachWechsel.liste && konsole.length === vorher, JSON.stringify(nachWechsel) + ' ' + konsole.slice(vorher).join(' | '));
+	}
+
+	// Größe des Betrachters auf einer Linkseite
+	const linkLage = (seite) => seite.evaluate(() => {
+		const f = document.getElementById('pdframe');
+		if (!f) {
+			return null;
+		}
+		const r = f.getBoundingClientRect();
+		return { breite: Math.round(r.width), hoehe: Math.round(r.height), top: Math.round(r.top), fensterB: window.innerWidth, fensterH: window.innerHeight };
+	});
+
 	// 2. öffentlicher Link auf die Datei
 	{
 		const kontext = await browser.newContext({ locale: 'de-DE', viewport: { width: 1440, height: 900 } });
@@ -235,6 +306,8 @@ async function zeileAnklicken(seite, name) {
 		const r = await betrachter(seite).catch(() => null);
 		const info = r ? await r.evaluate(() => ({ seiten: PDFViewerApplication.pagesCount, schliessen: !!document.getElementById('secondaryToolbarClose') && !document.getElementById('secondaryToolbarClose').classList.contains('hidden') })) : null;
 		pruefe('öffentlicher Link auf die PDF: Betrachter öffnet sofort, ohne Schließen', !!info && info.seiten === 2 && info.schliessen === false, JSON.stringify(info));
+		const lage = await linkLage(seite);
+		pruefe('öffentlicher Link auf die PDF: Betrachter nutzt die Fläche unter der Kopfleiste', !!lage && lage.breite >= lage.fensterB * 0.9 && lage.hoehe >= (lage.fensterH - lage.top) * 0.9 && lage.hoehe >= 600, JSON.stringify(lage));
 		await kontext.close();
 	}
 
@@ -248,6 +321,8 @@ async function zeileAnklicken(seite, name) {
 		const r = await betrachter(seite).catch(() => null);
 		const seiten = r ? await r.evaluate(() => PDFViewerApplication.pagesCount) : null;
 		pruefe('öffentlicher Ordner-Link: Klick öffnet den Betrachter', seiten === 2, seiten);
+		const lage = await linkLage(seite);
+		pruefe('öffentlicher Ordner-Link: Betrachter nutzt die Fläche unter der Kopfleiste', !!lage && lage.breite >= lage.fensterB * 0.9 && lage.hoehe >= (lage.fensterH - lage.top) * 0.9 && lage.hoehe >= 600, JSON.stringify(lage));
 		await kontext.close();
 	}
 
