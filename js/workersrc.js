@@ -3,15 +3,47 @@
  **/
 
 /**
+ * Der Wert des Abfrageparameters "file", gelesen wie pdf.js ihn liest
+ * (parseQueryString in web/viewer.js): Schlüssel kleingeschrieben, bei
+ * mehrfachem Vorkommen zählt der letzte, alles ab einem zweiten "=" fällt weg.
+ *
+ * Eine lockerere Lesart ("file=blob" irgendwo im Abfrageteil) ließe sich mit
+ * "?file=/pfad/zur.pdf&x=file=blob" überlisten: Die Rahmenprüfung sähe die
+ * Blob-Ansicht, pdf.js lüde den fremden Pfad (Nacharbeit 24.09.2026).
+ */
+function dateiParameter() {
+	var teile = location.search.substring(1).split('&');
+	var wert = null;
+	for (var i = 0; i < teile.length; i++) {
+		var paar = teile[i].split('=');
+		try {
+			if (decodeURIComponent(paar[0].toLowerCase()) !== 'file') {
+				continue;
+			}
+			wert = paar.length > 1 ? decodeURIComponent(paar[1]) : null;
+		} catch (e) {
+			// Kaputte Kodierung: pdf.js wirft an derselben Stelle und lädt
+			// nichts. Hier gilt das als "keine Blob-Ansicht".
+			wert = null;
+		}
+	}
+	return wert;
+}
+
+/**
  * Ist das die Blob-Ansicht (eigenes Fenster statt Rahmen)?
  *
  * location.search statt location.href: bei einem Anhaengsel wie
  * "...#?file=blob" enthaelt href die Zeichenkette ebenfalls, obwohl gar kein
  * Abfrageteil vorliegt. Damit liess sich der Rahmenschutz unten von aussen
  * aushebeln und der Betrachter auf oberster Ebene oeffnen.
+ *
+ * Die Rahmenprüfung ist keine Sicherheitsgrenze: Die Schutzvorgaben in
+ * deferredViewerConfig gelten in jeder Ansicht, auch auf oberster Ebene. Sie
+ * sorgt nur dafür, dass der Betrachter innerhalb der Anwendung läuft.
  */
 function istBlobAnsicht() {
-	return location.search.indexOf('file=blob') !== -1;
+	return dateiParameter() === 'blob';
 }
 
 function redirectIfNotDisplayedInFrame () {
