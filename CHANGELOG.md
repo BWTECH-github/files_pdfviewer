@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [1.1.2] - 2026-09-24
+
+### Security
+
+- Schutz gegen CVE-2024-4367 (Skriptausführung über präparierte Schriftarten in pdf.js 2.10.0) greift jetzt zuverlässig. js/workersrc.js setzte isEvalSupported=false und enableScripting erst am Ende eines try-Blocks, hinter getSanitizedCurrentLocale(). Diese Funktion greift auf parent.OC zu und wirft außerhalb des Anwendungsrahmens; der leere catch verschluckte damit genau die beiden Schutzvorgaben, pdf.js blieb bei seinem Standard true. Die Schutzvorgaben stehen jetzt zuerst, die Sprachermittlung ist wurffest (Rückfall auf die Browsersprache).
+- Rahmenschutz ließ sich umgehen: Er prüfte location.href auf „?file=blob“, ein Anhängsel „#?file=blob“ öffnete den Betrachter deshalb auf oberster Ebene. Geprüft wird jetzt location.search.
+- Im Browser gegen den unveränderten Betrachter geprüft: Mit 1.1.1 lieferten die Blob-Ansicht und die oberste Ebene mit „#?file=blob“ isEvalSupported=true (im zweiten Fall wurde das PDF geladen). Mit 1.1.2 ist der Wert in Rahmen und Blob-Ansicht false, die oberste Ebene leitet auf / um; im Rahmen werden PDFs weiter vollständig angezeigt.
+- Offen: pdf.js 2.10.0 selbst bleibt verwundbar; der Schutz hängt allein an dieser Option. Der Wechsel auf eine gepatchte pdf.js-Fassung ist ein eigener Auftrag.
+
 ## [1.1.1] - 2026-08-13
 
 ### Changed
