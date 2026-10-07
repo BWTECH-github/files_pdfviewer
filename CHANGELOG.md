@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.2] - 2026-10-07
+
+### Fixed
+
+- Anrede: Die Meldung beim Öffnen einer PDF aus einer Freigabe ohne Download-Recht siezte im Du-Katalog (de) und war sinnverkehrt („um die Berechtigung zu erteilen“). de duzt jetzt, de_DE siezt, beide „um die Berechtigung zu erhalten“ und „Betrachter“ statt „Viewer“.
+- Aus main 1.1.2 übernommen: Die Blob-Erkennung liest den Parameter `file` wie pdf.js (Rahmenprüfung ließ sich mit `?file=/pfad&x=file=blob` überlisten).
+
 ## [2.0.0] - 2026-09-22
 
 Redesign-Linie (owncloud.online Redesign 11.1). Nur im Zweig `redesign`.
