@@ -1,3 +1,28 @@
+/* Eingebettet in owncloud.online: keine lokale Datei öffnen */
+#openFile,
+#secondaryOpenFile {
+  display: none !important;
+}
+
+/* Dokumentfläche: Tastaturfokus sichtbar (pdf.js blendet ihn aus) */
+#viewerContainer:focus-visible {
+  outline: 2px solid #0060df;
+  outline-offset: -2px;
+}
+#viewerContainer.oco-fokus-still:focus-visible {
+  outline: none;
+}
+
+/* „Nicht gefunden“ der Suchleiste mit ausreichendem Kontrast (WCAG 1.4.3) */
+#findMsg {
+  color: #c50000;
+}
+@media (prefers-color-scheme: dark) {
+  #findMsg {
+    color: #ff9e9e;
+  }
+}
+
 .toolbarButton#secondaryToolbarClose::before {
   mask-image: url(../js/vendor/pdfjs/web/images/toolbarButton-zoomIn.svg);
   -webkit-mask-image: url(../js/vendor/pdfjs/web/images/toolbarButton-zoomIn.svg);

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.3] - 2026-10-29
+
+### Fixed
+
+- Der Betrachter über der Dateiliste ist ein modaler Dialog: Fokus im
+  Dokument, die verdeckte Seite ist nicht erreichbar, Escape schließt ihn
+  auch mit dem Fokus im Dokument, danach steht der Fokus wieder auf der Datei.
+- Rahmen benannt (Dateiname), Sprache des Betrachters gesetzt, Zoomen auf
+  Telefonen erlaubt, Fokus der Dokumentfläche sichtbar, „Nicht gefunden“ der
+  Suche lesbar.
+- Kein „Datei öffnen“ für lokale Dateien im eingebetteten Betrachter.
+
 ## [2.0.2] - 2026-10-07
 
 ### Fixed

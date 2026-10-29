@@ -49,6 +49,7 @@
 		 */
 		hide: function (listeWirdAbgebaut) {
 			$('#pdframe').remove();
+			this._release();
 			// Handler dieses Betrachters abräumen (sonst sammeln sie sich an)
 			$(window).off('popstate.pdfviewer');
 			$(document).off('keyup.pdfviewer');
@@ -62,7 +63,11 @@
 			if (listeWirdAbgebaut !== true && this._fileList && typeof this._fileList.setViewerMode === 'function') {
 				this._fileList.setViewerMode(false);
 			}
+			if (listeWirdAbgebaut !== true) {
+				this._restoreFocus(this._fileName);
+			}
 			this._fileList = null;
+			this._fileName = null;
 			// replace the controls with our own
 			$('#app-content #controls').removeClass('hidden');
 		},
@@ -75,6 +80,7 @@
 		show: function (fileName, dir, fileList) {
 			var self = this;
 			this._fileList = fileList || null;
+			this._fileName = fileName;
 			var downloadUrl = this._getDownloadUrl(fileName, dir);
 			var sharingToken = $("#sharingToken").val();
 			var uri = 'apps/files_pdfviewer/candownload?path={path}';
@@ -92,7 +98,7 @@
 				if(!response.canDownload){
 					OC.Notification.show(t('files_pdfviewer', 'This shared file does not have download permission and is possibly protected by secure view, please contact the owner of the file for granting permission or use a different viewer.'), {timeout : 7, type: 'error'});
 				}else{
-					self.renderPdfViewer(downloadUrl, true);
+					self.renderPdfViewer(downloadUrl, true, fileName);
 				}
 			});
 		},
@@ -101,7 +107,7 @@
 		 * @param downloadUrl
 		 * @param isFileList
 		 */
-		renderPdfViewer: function(downloadUrl, isFileList){
+		renderPdfViewer: function(downloadUrl, isFileList, fileName){
 			var self = this;
 			var $iframe;
 			var isPdfVisible;
@@ -109,6 +115,9 @@
 				file: downloadUrl
 			});
 			$iframe = $('<iframe id="pdframe" style="width:100%;height:100%;display:block;position:absolute;top:0;z-index:10;" src="' + viewer + '" sandbox="allow-downloads allow-scripts allow-same-origin allow-popups allow-modals allow-top-navigation" />');
+			// Rahmen benennen (Sprachausgabe, WCAG 4.1.2): Dateiname, auf der
+			// Linkseite einer einzelnen PDF der Name aus der Seite
+			$iframe.attr('title', fileName || $('#filename').val() || 'PDF');
 
 			if (isFileList === true && this._fileList && typeof this._fileList.setViewerMode === 'function') {
 				this._fileList.setViewerMode(true);
@@ -178,6 +187,37 @@
 					iframe.find('#secondaryToolbarClose').click(function () {
 						history.back()
 					});
+					// Liegt der Betrachter über der Liste, ist er ein modaler
+					// Dialog: Die verdeckte Seite dahinter ist nicht erreichbar,
+					// der Fokus springt in das Dokument.
+					self._isolate(this, $('#isPublic').val() ? document.getElementById('header') : null);
+					var container = this.contentDocument && this.contentDocument.getElementById('viewerContainer');
+					if (container) {
+						// Beim Öffnen ohne Fokusrahmen um das ganze Dokument; wer
+						// später per Tab zurückkommt, sieht ihn wieder
+						container.classList.add('oco-fokus-still');
+						container.addEventListener('blur', function () {
+							container.classList.remove('oco-fokus-still');
+						}, { once: true });
+						container.focus();
+					} else if (this.contentWindow) {
+						this.contentWindow.focus();
+					}
+					// Escape mit dem Fokus im Dokument: pdf.js schließt damit
+					// zuerst eigene Ebenen (Suchleiste, Werkzeugmenü,
+					// Passwortabfrage) und markiert das Ereignis; sonst den Betrachter.
+					if (this.contentWindow) {
+						this.contentWindow.addEventListener('keydown', function (e) {
+							if (e.key !== 'Escape' || e.defaultPrevented || !isPdfVisible) {
+								return;
+							}
+							if (e.target && e.target.closest && e.target.closest('#findbar, #secondaryToolbar, .doorHanger, #overlayContainer')) {
+								return;
+							}
+							isPdfVisible = false;
+							history.back();
+						});
+					}
 				} else {
 					iframe.find("#secondaryToolbarClose").addClass('hidden');
 				}
@@ -205,6 +245,60 @@
 			}, 0);
 		},
 
+
+		/**
+		 * Alles außer dem Betrachter (und optional dem sichtbaren Kopf der
+		 * Linkseite) vorübergehend inert schalten: Tab und Sprachausgabe
+		 * landen nicht mehr in der verdeckten Seite.
+		 *
+		 * @param {Element} el der Rahmen
+		 * @param {Element|null} keep bleibt bedienbar
+		 * @private
+		 */
+		_isolate: function (el, keep) {
+			for (var n = el; n && n.parentElement && n !== document.body; n = n.parentElement) {
+				$(n).siblings().each(function () {
+					if (/^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(this.tagName) || this.hasAttribute('inert')) {
+						return;
+					}
+					if (keep && (this === keep || $.contains(this, keep))) {
+						return;
+					}
+					// Meldungen müssen klickbar bleiben
+					if (this.id === 'notification-container' || $(this).find('#notification-container').length) {
+						return;
+					}
+					this.setAttribute('inert', '');
+					this.setAttribute('data-pdfviewer-inert', '');
+				});
+			}
+		},
+
+		/**
+		 * @private
+		 */
+		_release: function () {
+			$('[data-pdfviewer-inert]').removeAttr('inert').removeAttr('data-pdfviewer-inert');
+		},
+
+		/**
+		 * Nach dem Schließen zurück auf die Zeile der Datei in der Liste.
+		 *
+		 * @param {string|null} fileName
+		 * @private
+		 */
+		_restoreFocus: function (fileName) {
+			if (!fileName) {
+				return;
+			}
+			var $zeile = $('#fileList tr[data-file]').filter(function () {
+				return this.getAttribute('data-file') === fileName;
+			}).first();
+			var ziel = $zeile.find('a.name').get(0) || $zeile.get(0);
+			if (ziel && typeof ziel.focus === 'function') {
+				ziel.focus();
+			}
+		},
 
 		/**
 		 * @param fileName
@@ -270,6 +364,6 @@ $(document).ready(function () {
 			token: sharingToken
 		});
 		var viewer = OCA.FilesPdfViewer.PreviewPlugin;
-		viewer.renderPdfViewer(downloadUrl, false);
+		viewer.renderPdfViewer(downloadUrl, false, $('#filename').val());
 	}
 });
