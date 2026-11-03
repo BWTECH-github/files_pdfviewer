@@ -10,13 +10,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 - Tastatur im Betrachter: Tab hält nur an sichtbaren Bedienelementen. Die
   Dialoge von pdf.js (Passwortabfrage, Dokumenteigenschaften) nehmen den
-  Fokus auf und halten ihn; nach dem Schließen von Dialog, Werkzeugmenü oder
-  Suchleiste steht er sichtbar auf dem Knopf, der sie geöffnet hat.
-  „Werkzeuge“ führt per Tab zuerst in das offene Menü, die Suchoptionen
-  zeigen den Fokus.
+  Fokus auf und halten ihn; stand er in Dialog, Werkzeugmenü oder Suchleiste,
+  steht er nach dem Schließen sichtbar auf dem Knopf, der sie geöffnet hat.
+  Escape schließt bei offenem Werkzeugmenü oder offener Suchleiste nur diese,
+  nicht den Betrachter. „Werkzeuge“ führt per Tab zuerst in das offene Menü,
+  die Suchoptionen zeigen den Fokus.
 - Download-Recht: Die Prüfung gilt für angemeldete Personen auch mit
   Basic-Auth oder App-Passwort, Linkfreigaben prüfen über ihr Token. Ohne
-  Anmeldung antwortet sie mit 401, eine fehlende Datei mit 404.
+  Anmeldung antwortet sie mit 401, eine fehlende Datei mit 404. Schlägt sie
+  aus einem anderen Grund fehl, erscheint eine Fehlermeldung statt des
+  Betrachters.
 - Der Hinweis „kein Download-Recht“ bleibt stehen, bis er geschlossen wird,
   und erscheint auch bei mehreren Klicks nur einmal; ar und gl übersetzt.
 

@@ -12,6 +12,10 @@
  *     Herunterladen (echter Download), Drucken vorhanden
  *   - Schutz gegen CVE-2024-4367 aktiv (isEvalSupported=false)
  *   - Schließen per Knopf und per Escape führt zurück zur Liste
+ *   - Escape bei offenem Werkzeugmenü oder offener Suchleiste schließt nur
+ *     diese Ebene, auch mit dem Fokus auf „Werkzeuge“ oder im Dokument
+ *   - Prüfung des Download-Rechts schlägt fehl: bei 404 öffnet der Betrachter,
+ *     sonst eine Fehlermeldung statt des Betrachters (zwei Klicks: eine)
  *   - Favoriten (direkt und nach Ansichtswechsel), "Per Link geteilt":
  *     Klick öffnet, Escape schließt ohne Fehler
  *   - bei offenem Betrachter ist die Navigation inert (modaler Dialog), nach
@@ -238,6 +242,96 @@ async function zeileAnklicken(seite, name) {
 		await admin.seite.keyboard.press('Escape');
 		await admin.seite.waitForFunction(() => !document.getElementById('pdframe'), null, { timeout: 10000 }).catch(() => {});
 		pruefe('Escape schließt den Betrachter', await admin.seite.evaluate(() => !document.getElementById('pdframe')));
+
+		// Escape bei offener Ebene von pdf.js schließt nur die Ebene, auch wenn
+		// der Fokus nicht darin steht: auf „Werkzeuge“ (nach Enter oder Klick)
+		// oder im Dokument bei offener Suchleiste. Das nächste Escape schließt
+		// den Betrachter.
+		for (const art of ['werkzeuge-enter', 'werkzeuge-klick', 'suche-klick-dokument']) {
+			await zeileAnklicken(admin.seite, 'probe.pdf');
+			const r = await betrachter(admin.seite);
+			if (!r) {
+				pruefe('Escape bei offener Ebene (' + art + '): Betrachter öffnet', false);
+				continue;
+			}
+			const suche = art === 'suche-klick-dokument';
+			const ebene = suche ? 'findbar' : 'secondaryToolbar';
+			const fokusSoll = suche ? 'viewerContainer' : 'secondaryToolbarToggle';
+			if (art === 'werkzeuge-enter') {
+				await r.focus('#secondaryToolbarToggle');
+				await admin.seite.keyboard.press('Enter');
+			} else if (art === 'werkzeuge-klick') {
+				await r.click('#secondaryToolbarToggle');
+			} else {
+				await r.click('#viewFind');
+				await r.fill('#findInput', 'zwei');
+				await r.press('#findInput', 'Enter');
+				await r.click('#viewerContainer', { position: { x: 30, y: 300 } });
+			}
+			await admin.seite.waitForTimeout(400);
+			const zustand = () => r.evaluate((id) => ({
+				offen: !document.getElementById(id).classList.contains('hidden'),
+				fokus: document.activeElement.id || document.activeElement.tagName,
+				sichtbar: document.activeElement.matches(':focus-visible'),
+			}), ebene);
+			const vorher = await zustand();
+			await admin.seite.keyboard.press('Escape');
+			await admin.seite.waitForTimeout(800);
+			const offen = await admin.seite.evaluate(() => !!document.getElementById('pdframe'));
+			const nachher = offen ? await zustand() : null;
+			pruefe('Escape bei offener Ebene (' + art + '): nur die Ebene zu, Betrachter offen, Fokus auf ' + fokusSoll + (art === 'werkzeuge-enter' ? ' (sichtbar)' : ''),
+				vorher.offen && offen && !nachher.offen && nachher.fokus === fokusSoll && (art !== 'werkzeuge-enter' || nachher.sichtbar),
+				JSON.stringify({ vorher, offen, nachher }));
+			if (offen) {
+				await admin.seite.keyboard.press('Escape');
+				await admin.seite.waitForFunction(() => !document.getElementById('pdframe'), null, { timeout: 10000 }).catch(() => {});
+			}
+			pruefe('Escape bei offener Ebene (' + art + '): nächstes Escape schließt den Betrachter', offen && await admin.seite.evaluate(() => !document.getElementById('pdframe')));
+		}
+
+		// Prüfung des Download-Rechts schlägt fehl (vorgetäuschte Antworten): Nur
+		// bei 404 (Datei weg) öffnet der Betrachter und meldet den Ladefehler
+		// selbst. Bei Serverfehler, 403 oder einer Antwort ohne JSON kommt eine
+		// Fehlermeldung statt des Betrachters, bei zwei Klicks nur eine.
+		const candownload = /\/apps\/files_pdfviewer\/candownload/;
+		const konsoleVorher = konsole.length;
+		for (const fall of [
+			{ status: 404, typ: 'application/json', body: '{"message":"Not found"}' },
+			{ status: 500, typ: 'text/plain', body: 'Internal Server Error' },
+			{ status: 403, typ: 'application/json', body: '{"message":"Forbidden"}' },
+			{ status: 200, typ: 'text/html', body: '<!DOCTYPE html><html><body>Anmeldung</body></html>' },
+		]) {
+			const name = 'candownload ' + fall.status + (fall.typ === 'text/html' ? ' mit HTML' : '');
+			await admin.seite.route(candownload, (route) => route.fulfill({ status: fall.status, contentType: fall.typ, body: fall.body }));
+			const istOffen = () => admin.seite.evaluate(() => !!document.getElementById('pdframe'));
+			await zeileAnklicken(admin.seite, 'probe.pdf');
+			await admin.seite.waitForTimeout(1200);
+			let offen = await istOffen();
+			if (fall.status === 404) {
+				pruefe(name + ': Betrachter öffnet', offen && !!(await betrachter(admin.seite).catch(() => null)));
+			} else {
+				if (!offen) {
+					await zeileAnklicken(admin.seite, 'probe.pdf');
+					await admin.seite.waitForTimeout(1200);
+					offen = await istOffen();
+				}
+				const zeilen = await admin.seite.evaluate(() => Array.from(document.querySelectorAll('#notification-container .row, #notification .row'))
+					.filter((e) => e.getClientRects().length).map((e) => e.textContent.trim().slice(0, 100)));
+				pruefe(name + ': kein Betrachter, genau eine Fehlermeldung nach zwei Klicks', !offen && zeilen.length === 1 && /error occurred|Fehler aufgetreten/i.test(zeilen[0]), JSON.stringify({ offen, zeilen }));
+			}
+			if (offen) {
+				await admin.seite.keyboard.press('Escape');
+				await admin.seite.waitForFunction(() => !document.getElementById('pdframe'), null, { timeout: 10000 }).catch(() => {});
+			}
+			await admin.seite.unroute(candownload);
+		}
+		// Ladefehler der vorgetäuschten Antworten sind gewollt; Meldung wegräumen
+		for (let i = konsole.length - 1; i >= konsoleVorher; i--) {
+			if (/candownload/.test(konsole[i])) {
+				konsole.splice(i, 1);
+			}
+		}
+		await admin.seite.evaluate(() => document.querySelectorAll('#notification-container .row, #notification .row').forEach((e) => e.remove()));
 	}
 
 	// 1b. andere Dateiansichten: Favoriten (direkt und nach Wechsel), per Link geteilt

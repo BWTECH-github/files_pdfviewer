@@ -93,38 +93,48 @@
 			// mit einer Umleitung auf die Anmeldeseite.
 			$.ajax({url: url, dataType: 'json'}).then(function (response) {
 				if(!response.canDownload){
-					self._showNoDownloadNotice();
+					self._showNotice(t('files_pdfviewer', 'This shared file does not have download permission and is possibly protected by secure view, please contact the owner of the file for granting permission or use a different viewer.'));
 				}else{
 					self.renderPdfViewer(downloadUrl, true, fileName);
 				}
 			}, function (xhr) {
 				// 401 und Verbindungsabbruch behandelt der Kern selbst (Seite neu
-				// laden, Anmeldung). Sonst – Datei inzwischen weg, Serverfehler –
-				// den Betrachter öffnen: Er meldet selbst, wenn sich die Datei
-				// nicht laden lässt; das Herunterladen sperrt der Server.
+				// laden, Anmeldung)
 				if (xhr.status === 401 || xhr.status === 0) {
 					return;
 				}
-				self.renderPdfViewer(downloadUrl, true, fileName);
+				// Datei inzwischen weg: Der Betrachter meldet selbst, dass sie
+				// sich nicht laden lässt
+				if (xhr.status === 404) {
+					self.renderPdfViewer(downloadUrl, true, fileName);
+					return;
+				}
+				// Serverfehler, 403, Antwort ohne JSON: Das Download-Recht ist
+				// unbekannt. Ohne Recht sperrt der Server das Laden, der Betrachter
+				// zeigte dann nur einen Ladefehler statt des Hinweises. Deshalb
+				// die allgemeine Fehlermeldung des Kerns; ein neuer Klick prüft
+				// erneut.
+				self._showNotice(t('core', 'An error occurred. Please try again'));
 			});
 		},
 
-		/** @type {jQuery|null} sichtbare Meldung „kein Download-Recht“ */
-		_noDownloadNotice: null,
+		/** @type {jQuery|null} sichtbare Meldung des Betrachters */
+		_notice: null,
 
 		/**
-		 * Meldung „kein Download-Recht“: bleibt stehen, bis sie geschlossen
-		 * wird (wie die Fehlermeldungen des Kerns; der lange Text verschwand
-		 * sonst nach 7 Sekunden, WCAG 2.2.1). Ein zweiter Klick ersetzt sie,
-		 * statt eine weitere darunter zu stapeln.
+		 * Fehlermeldung, die stehen bleibt, bis sie geschlossen wird (wie die
+		 * des Kerns; der lange Text „kein Download-Recht“ verschwand sonst nach
+		 * 7 Sekunden, WCAG 2.2.1). Eine neue ersetzt die vorige, statt eine
+		 * weitere darunter zu stapeln.
 		 *
+		 * @param {string} text
 		 * @private
 		 */
-		_showNoDownloadNotice: function () {
-			if (this._noDownloadNotice && this._noDownloadNotice.closest('#notification').length) {
-				this._noDownloadNotice.remove();
+		_showNotice: function (text) {
+			if (this._notice && this._notice.closest('#notification').length) {
+				this._notice.remove();
 			}
-			this._noDownloadNotice = OC.Notification.show(t('files_pdfviewer', 'This shared file does not have download permission and is possibly protected by secure view, please contact the owner of the file for granting permission or use a different viewer.'), {type: 'error'});
+			this._notice = OC.Notification.show(text, {type: 'error'});
 		},
 
 		/**
@@ -227,14 +237,24 @@
 					} else if (this.contentWindow) {
 						this.contentWindow.focus();
 					}
-					// Escape mit dem Fokus im Dokument: pdf.js schließt damit
-					// zuerst eigene Ebenen (Suchleiste, Werkzeugmenü,
-					// Passwortabfrage) und markiert das Ereignis; sonst den Betrachter.
+					// Escape mit dem Fokus im Rahmen schließt den Betrachter. Ist
+					// eine Ebene von pdf.js offen (Werkzeugmenü, Suchleiste,
+					// Dialog), schließt dasselbe Escape nur sie. Maßgeblich ist der
+					// Zustand der Ebene, nicht der Fokus („Werkzeuge“ liegt außerhalb
+					// des Menüs) und nicht defaultPrevented: pdf.js hängt seinen
+					// Listener erst nach der asynchronen Einrichtung an, dieser
+					// hier läuft deshalb meist vorher.
 					if (this.contentWindow) {
-						this.contentWindow.addEventListener('keydown', function (e) {
+						var fenster = this.contentWindow;
+						fenster.addEventListener('keydown', function (e) {
 							if (e.key !== 'Escape' || e.defaultPrevented || !isPdfVisible) {
 								return;
 							}
+							if (self._isPdfLayerOpen(fenster.PDFViewerApplication)) {
+								return;
+							}
+							// Die Suchleiste schließt bei Escape darin selbst, vor
+							// diesem Listener; ihr Zustand ist dann schon „zu“
 							if (e.target && e.target.closest && e.target.closest('#findbar, #secondaryToolbar, .doorHanger, #overlayContainer')) {
 								return;
 							}
@@ -269,6 +289,23 @@
 			}, 0);
 		},
 
+
+		/**
+		 * Ist in pdf.js eine Ebene offen, die Escape selbst schließt? Dieselben
+		 * Fälle wie in webViewerKeyDown und im OverlayManager von pdf.js 2.10.
+		 *
+		 * @param {object|undefined} app PDFViewerApplication des Rahmens
+		 * @return {boolean}
+		 * @private
+		 */
+		_isPdfLayerOpen: function (app) {
+			if (!app) {
+				return false;
+			}
+			return !!((app.overlayManager && app.overlayManager.active) ||
+				(app.secondaryToolbar && app.secondaryToolbar.isOpen) ||
+				(app.findBar && app.findBar.opened && !app.supportsIntegratedFind));
+		},
 
 		/**
 		 * Alles außer dem Betrachter (und optional dem sichtbaren Kopf der
