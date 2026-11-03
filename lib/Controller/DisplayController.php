@@ -14,11 +14,13 @@ namespace OCA\Files_PdfViewer\Controller;
 
 use OC\Files\Filesystem;
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IRequest;
 use OCP\IURLGenerator;
+use OCP\Share\Exceptions\ShareNotFound;
 use OCP\Share\IManager;
 
 class DisplayController extends Controller {
@@ -70,45 +72,54 @@ class DisplayController extends Controller {
 	}
 
 	/**
-	 * @PublicPage
+	 * Darf die angemeldete Person die Datei herunterladen?
+	 *
+	 * Keine öffentliche Seite: Nur dann meldet der Kern die Person vor dem
+	 * Aufruf auch per Basic-Auth oder App-Passwort an (SecurityMiddleware,
+	 * OC::handleLogin). Auf einer öffentlichen Seite bliebe eine solche
+	 * Anfrage anonym, ohne Dateibereich. Ohne Anmeldung antwortet der Kern
+	 * mit 401.
+	 *
+	 * @NoAdminRequired
 	 * @NoCSRFRequired
+	 *
+	 * @param string $path Pfad im Dateibereich der angemeldeten Person
 	 * @return JSONResponse
 	 */
-
-	public function canDownload() {
-		$canDownload = true;
-		$params = $this->request->getParams();
-
-		if (!empty($params['sharingToken'])) {
-			return new JSONResponse([
-				'canDownload' => $this->canDownloadShareByToken($params['sharingToken'])
-			]);
-		}
-
-		$storage = $this->getStorage($params);
+	public function canDownload($path = '') {
+		$storage = $this->getStorage($path);
 		if ($storage === null) {
-			return new JSONResponse(['canDownload' => false]);
+			// Eine Datei, die es nicht (mehr) gibt, ist kein fehlendes Recht
+			return new JSONResponse(['canDownload' => false], Http::STATUS_NOT_FOUND);
 		}
 
 		if (!$storage->instanceOfStorage('OCA\Files_Sharing\SharedStorage')) {
-			return new JSONResponse(['canDownload' => $canDownload]);
+			return new JSONResponse(['canDownload' => true]);
 		}
 
 		/** @var \OCA\Files_Sharing\SharedStorage $storage */
 		'@phan-var \OCA\Files_Sharing\SharedStorage $storage';  /* @phpstan-ignore-line */
-		$share = $storage->getShare();
-		$canDownload = $this->canDownloadShare($share);
-
-		return new JSONResponse(['canDownload' => $canDownload]);
+		return new JSONResponse(['canDownload' => $this->canDownloadShare($storage->getShare())]);
 	}
 
-	private function canDownloadShareByToken($token) {
+	/**
+	 * Darf über den öffentlichen Link heruntergeladen werden? Es zählt allein
+	 * die Freigabe hinter dem Token.
+	 *
+	 * @PublicPage
+	 * @NoCSRFRequired
+	 *
+	 * @param string $token
+	 * @return JSONResponse
+	 */
+	public function canDownloadPublic($token) {
 		try {
 			$share = $this->shareManager->getShareByToken($token);
-			return $this->canDownloadShare($share);
-		} catch (\Throwable $e) {
-			return false;
+		} catch (ShareNotFound $e) {
+			return new JSONResponse(['canDownload' => false], Http::STATUS_NOT_FOUND);
 		}
+
+		return new JSONResponse(['canDownload' => $this->canDownloadShare($share)]);
 	}
 
 	private function canDownloadShare($share) {
@@ -122,25 +133,26 @@ class DisplayController extends Controller {
 		return $downloadPermission === null || $downloadPermission === true;
 	}
 
-	protected function getStorage($params) {
+	/**
+	 * Speicher der Datei im Dateibereich der angemeldeten Person.
+	 *
+	 * @param string $path
+	 * @return \OCP\Files\Storage|null null, wenn es die Datei dort nicht gibt
+	 */
+	protected function getStorage($path) {
+		if (!\is_string($path) || $path === '') {
+			return null;
+		}
+
 		try {
-			if (!empty($params['sharingToken'])) {
-				$share = $this->shareManager->getShareByToken($params['sharingToken']);
-				return $share->getNode()->getStorage();
-			}
-
-			if (empty($params['path'])) {
-				return null;
-			}
-
-			$fileInfo = Filesystem::getFileInfo($params['path']);
-			if ($fileInfo === null || $fileInfo === false) {
-				return null;
-			}
-
-			return $fileInfo->getStorage();
+			$fileInfo = Filesystem::getFileInfo($path);
 		} catch (\Throwable $e) {
 			return null;
 		}
+		if ($fileInfo === null || $fileInfo === false) {
+			return null;
+		}
+
+		return $fileInfo->getStorage();
 	}
 }

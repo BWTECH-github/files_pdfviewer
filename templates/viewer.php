@@ -52,7 +52,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 
 </head>
 
-<body tabindex="1">
+<body>
 <div id="outerContainer">
 
 	<div id="sidebarContainer">
@@ -259,7 +259,8 @@ See https://github.com/adobe-type-tools/cmap-resources
 							<span data-l10n-id="tools_label">Tools</span>
 						</button>
 
-						<button id="secondaryToolbarClose" class="toolbarButton" title="<?php p($l->t("Close"))?>" tabindex="37">
+						<?php /* tabindex nach dem Werkzeugmenü (51 bis 68): Tab führt von „Werkzeuge“ zuerst in das offene Menü */ ?>
+						<button id="secondaryToolbarClose" class="toolbarButton" title="<?php p($l->t("Close"))?>" tabindex="69">
 							<span><?php p($l->t("Close"))?></span>
 						</button>
 

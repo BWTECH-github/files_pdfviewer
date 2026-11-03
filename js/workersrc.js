@@ -113,6 +113,143 @@ function getSanitizedCurrentLocale(){
 	return String(navigator.language || 'en').replace('_', '-');
 }
 
+/**
+ * Tastaturfokus in den Ebenen von pdf.js: Werkzeugmenü, Suchleiste und die
+ * Dialoge (Passwortabfrage, Dokumenteigenschaften, Druckfortschritt).
+ *
+ * pdf.js lässt den Fokus beim Schließen einer Ebene auf dem nun unsichtbaren
+ * Element stehen, er fiel damit auf <body>. In die Passwortabfrage setzt
+ * pdf.js ihn eingebettet gar nicht, und aus einem offenen Dialog lief Tab
+ * wegen der positiven tabindex-Werte der Werkzeugleiste auf die verdeckten
+ * Knöpfe dahinter.
+ *
+ * @param {object} app PDFViewerApplication, fertig eingerichtet
+ */
+function fokusFuehren(app) {
+	var dialoge = app.overlayManager;
+	if (!dialoge || dialoge.ocoFokus) {
+		return;
+	}
+	dialoge.ocoFokus = true;
+	var ausloeser = null;
+
+	function bedienbar(el) {
+		return !!(el && el !== document.body && el.isConnected && !el.disabled &&
+			el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
+	}
+
+	function offenerDialog() {
+		return dialoge.active ? document.getElementById(dialoge.active) : null;
+	}
+
+	function halte(dialog) {
+		return Array.prototype.filter.call(
+			dialog.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])'),
+			bedienbar
+		);
+	}
+
+	function inDenDialog(dialog) {
+		var erster = halte(dialog)[0];
+		if (erster) {
+			erster.focus();
+		}
+	}
+
+	// Zurück auf den Auslöser. Lag er in einer inzwischen geschlossenen Ebene,
+	// auf den Knopf, der sie öffnet, sonst auf die Dokumentfläche.
+	function zurueck(el) {
+		var ziel = el;
+		if (!bedienbar(ziel)) {
+			var ebene = el && el.closest ? el.closest('#secondaryToolbar, #findbar') : null;
+			ziel = document.getElementById(ebene ? (ebene.id === 'findbar' ? 'viewFind' : 'secondaryToolbarToggle') : 'viewerContainer');
+		}
+		if (bedienbar(ziel)) {
+			ziel.focus();
+		}
+	}
+
+	var oeffnen = dialoge.open;
+	dialoge.open = function () {
+		var vorher = document.activeElement;
+		return oeffnen.apply(dialoge, arguments).then(function (wert) {
+			ausloeser = vorher;
+			var dialog = offenerDialog();
+			if (dialog) {
+				inDenDialog(dialog);
+			}
+			return wert;
+		});
+	};
+
+	var schliessen = dialoge.close;
+	dialoge.close = function () {
+		return schliessen.apply(dialoge, arguments).then(function (wert) {
+			if (!dialoge.active && !bedienbar(document.activeElement)) {
+				zurueck(ausloeser);
+			}
+			ausloeser = null;
+			return wert;
+		});
+	};
+
+	// Tab und Umschalt+Tab bleiben im offenen Dialog
+	window.addEventListener('keydown', function (e) {
+		var dialog = e.key === 'Tab' && !e.altKey && !e.ctrlKey && !e.metaKey ? offenerDialog() : null;
+		if (!dialog) {
+			return;
+		}
+		e.preventDefault();
+		var liste = halte(dialog);
+		if (!liste.length) {
+			return;
+		}
+		var i = liste.indexOf(document.activeElement);
+		liste[e.shiftKey ? (i > 0 ? i - 1 : liste.length - 1) : (i + 1) % liste.length].focus();
+	}, true);
+
+	// Fokus, der hinter einen offenen Dialog gerät (etwa der Startfokus auf
+	// der Dokumentfläche, während die Passwortabfrage schon offen ist)
+	document.addEventListener('focusin', function (e) {
+		var dialog = offenerDialog();
+		if (dialog && !dialog.contains(e.target)) {
+			inDenDialog(dialog);
+		}
+	}, true);
+
+	// Werkzeugmenü und Suchleiste: Stand der Fokus darin, geht er beim
+	// Schließen auf den Knopf, der sie öffnet
+	function knopfNachSchliessen(ebene, leisteId, knopfId) {
+		var leiste = document.getElementById(leisteId);
+		if (!ebene || !leiste || typeof ebene.close !== 'function') {
+			return;
+		}
+		var schliesseEbene = ebene.close;
+		ebene.close = function () {
+			var offen = !leiste.classList.contains('hidden');
+			var vorher = document.activeElement;
+			var ergebnis = schliesseEbene.apply(ebene, arguments);
+			// Öffnet ein Menüeintrag einen Dialog, führt der den Fokus
+			if (offen && leiste.classList.contains('hidden') && !offenerDialog() &&
+				(!vorher || vorher === document.body || leiste.contains(vorher))) {
+				zurueck(document.getElementById(knopfId));
+			}
+			return ergebnis;
+		};
+	}
+	knopfNachSchliessen(app.secondaryToolbar, 'secondaryToolbar', 'secondaryToolbarToggle');
+	knopfNachSchliessen(app.findBar, 'findbar', 'viewFind');
+}
+
+// viewer.js ist dann geladen; seine Einrichtung läuft asynchron
+document.addEventListener('DOMContentLoaded', function () {
+	if (window.PDFViewerApplication && PDFViewerApplication.initializedPromise) {
+		PDFViewerApplication.initializedPromise.then(function () {
+			fokusFuehren(PDFViewerApplication);
+		});
+	}
+});
+
 // Wait until viewer is ready and patch it on the fly
 try {
 	parent.document.addEventListener('webviewerloaded', deferredViewerConfig, true);

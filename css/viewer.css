@@ -242,6 +242,14 @@ select:focus-visible {
   outline-offset: 1px;
 }
 
+/* Suchoptionen: Das Kästchen selbst ist unsichtbar (opacity 0), den Fokus
+   zeigt die Beschriftung – auch bei gesetzter Option, deren Farbe sonst den
+   Fokus-Tint überdeckt */
+.findbar input[type="checkbox"]:focus-visible + label {
+  outline: 2px solid #0a84ff;
+  outline-offset: 1px;
+}
+
 /* WCAG 1.4.11 Non-Text-Kontrast: Der Ruhe-Rahmen der Eingabefelder
    (Suche, Seitenzahl, Passwort, Zoom-Select) nutzt in der gebuendelten
    viewer.css `--field-border-color: rgb(187,187,188)` = nur ~1,9:1 gegen

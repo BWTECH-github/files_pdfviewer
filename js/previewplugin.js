@@ -83,24 +83,48 @@
 			this._fileName = fileName;
 			var downloadUrl = this._getDownloadUrl(fileName, dir);
 			var sharingToken = $("#sharingToken").val();
-			var uri = 'apps/files_pdfviewer/candownload?path={path}';
+			// Öffentlicher Link: Es zählt das Token. Sonst die Route mit
+			// Anmeldung (Sitzung oder Basic-Auth).
+			var url = sharingToken
+				? OC.generateUrl('/apps/files_pdfviewer/s/{token}/candownload', {token: sharingToken})
+				: OC.generateUrl('/apps/files_pdfviewer/candownload?path={path}', {path: dir + '/' + fileName});
 
-			var params = {
-				path : dir+"/"+fileName,
-			};
-
-			if(sharingToken){
-				params.sharingToken = sharingToken;
-				uri += '&sharingToken={sharingToken}';
-			}
-
-			$.get(OC.generateUrl(uri, params)).then(function (response) {
+			// dataType json: Ohne Sitzung antwortet der Kern dann mit 401 statt
+			// mit einer Umleitung auf die Anmeldeseite.
+			$.ajax({url: url, dataType: 'json'}).then(function (response) {
 				if(!response.canDownload){
-					OC.Notification.show(t('files_pdfviewer', 'This shared file does not have download permission and is possibly protected by secure view, please contact the owner of the file for granting permission or use a different viewer.'), {timeout : 7, type: 'error'});
+					self._showNoDownloadNotice();
 				}else{
 					self.renderPdfViewer(downloadUrl, true, fileName);
 				}
+			}, function (xhr) {
+				// 401 und Verbindungsabbruch behandelt der Kern selbst (Seite neu
+				// laden, Anmeldung). Sonst – Datei inzwischen weg, Serverfehler –
+				// den Betrachter öffnen: Er meldet selbst, wenn sich die Datei
+				// nicht laden lässt; das Herunterladen sperrt der Server.
+				if (xhr.status === 401 || xhr.status === 0) {
+					return;
+				}
+				self.renderPdfViewer(downloadUrl, true, fileName);
 			});
+		},
+
+		/** @type {jQuery|null} sichtbare Meldung „kein Download-Recht“ */
+		_noDownloadNotice: null,
+
+		/**
+		 * Meldung „kein Download-Recht“: bleibt stehen, bis sie geschlossen
+		 * wird (wie die Fehlermeldungen des Kerns; der lange Text verschwand
+		 * sonst nach 7 Sekunden, WCAG 2.2.1). Ein zweiter Klick ersetzt sie,
+		 * statt eine weitere darunter zu stapeln.
+		 *
+		 * @private
+		 */
+		_showNoDownloadNotice: function () {
+			if (this._noDownloadNotice && this._noDownloadNotice.closest('#notification').length) {
+				this._noDownloadNotice.remove();
+			}
+			this._noDownloadNotice = OC.Notification.show(t('files_pdfviewer', 'This shared file does not have download permission and is possibly protected by secure view, please contact the owner of the file for granting permission or use a different viewer.'), {type: 'error'});
 		},
 
 		/**

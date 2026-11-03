@@ -1,7 +1,7 @@
 OC.L10N.register(
     "files_pdfviewer",
     {
-    "This shared file does not have download permission and is possibly proteced by secure view, please contact the owner of the file for granting permission or use a different viewer." : "هذا الملف المشترك ليس لديه إذن تنزيل وربما يكون محميًا بواسطة طريقة عرض آمنة ، يرجى الاتصال بمالك الملف لمنح الإذن أو استخدام عارض مختلف.",
+    "This shared file does not have download permission and is possibly protected by secure view, please contact the owner of the file for granting permission or use a different viewer." : "هذا الملف المشترك ليس لديه إذن تنزيل وربما يكون محميًا بواسطة طريقة عرض آمنة ، يرجى الاتصال بمالك الملف لمنح الإذن أو استخدام عارض مختلف.",
     "Open in PDF Viewer" : "فتح في عارض PDF",
     "Close" : "إغلاق"
 },

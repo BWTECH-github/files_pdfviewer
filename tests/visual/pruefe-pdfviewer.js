@@ -14,7 +14,8 @@
  *   - Schließen per Knopf und per Escape führt zurück zur Liste
  *   - Favoriten (direkt und nach Ansichtswechsel), "Per Link geteilt":
  *     Klick öffnet, Escape schließt ohne Fehler
- *   - Ansichtswechsel bei offenem Betrachter schließt ihn ohne Fehler
+ *   - bei offenem Betrachter ist die Navigation inert (modaler Dialog), nach
+ *     Escape wechselt die Ansicht ohne Fehler
  *   - öffentlicher Link auf die PDF: Betrachter öffnet sofort, ohne Schließen,
  *     und nutzt die Fläche unter der Kopfleiste
  *   - öffentlicher Link auf den Ordner: Klick öffnet den Betrachter, ganze Fläche
@@ -273,18 +274,26 @@ async function zeileAnklicken(seite, name) {
 		}
 	}
 
-	// 1c. Ansichtswechsel bei offenem Betrachter
+	// 1c. Navigation bei offenem Betrachter: Er ist ein modaler Dialog, die
+	// Navigation dahinter ist inert. Nach Escape wechselt die Ansicht.
 	await admin.seite.goto(BASIS + '/index.php/apps/files/?dir=%2FPDF-Probe', { waitUntil: 'load' });
 	await zeileAnklicken(admin.seite, 'probe.pdf');
 	if (await betrachter(admin.seite).catch(() => null)) {
 		const vorher = konsole.length;
+		const inert = await admin.seite.evaluate(() => {
+			const n = document.querySelector('#app-navigation');
+			return !!(n && n.closest('[inert]'));
+		});
+		await admin.seite.keyboard.press('Escape');
+		await admin.seite.waitForTimeout(800);
 		await admin.seite.locator('#app-navigation li[data-id="favorites"] a').first().click({ timeout: 10000 }).catch(() => {});
 		await admin.seite.waitForTimeout(1500);
 		const nachWechsel = await admin.seite.evaluate(() => ({
 			rahmen: !!document.getElementById('pdframe'),
 			liste: Array.from(document.querySelectorAll('#fileList tr[data-file="probe.pdf"]')).some((z) => z.getClientRects().length > 0) && /favorites/.test(location.search),
 		}));
-		pruefe('Ansichtswechsel bei offenem Betrachter: Betrachter zu, neue Ansicht sichtbar, kein Fehler', !nachWechsel.rahmen && nachWechsel.liste && konsole.length === vorher, JSON.stringify(nachWechsel) + ' ' + konsole.slice(vorher).join(' | '));
+		nachWechsel.inert = inert;
+		pruefe('Navigation bei offenem Betrachter inert, nach Escape Ansichtswechsel ohne Fehler', inert && !nachWechsel.rahmen && nachWechsel.liste && konsole.length === vorher, JSON.stringify(nachWechsel) + ' ' + konsole.slice(vorher).join(' | '));
 	}
 
 	// Größe des Betrachters auf einer Linkseite
