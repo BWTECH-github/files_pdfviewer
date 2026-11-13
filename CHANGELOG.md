@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.6] - 2026-11-13
+
+### Behoben
+- Link auf eine einzelne PDF: Die verdeckte Karte ist per Tab nicht mehr erreichbar.
+- Link auf eine einzelne PDF: Dateiname und „Herunterladen“ stehen in der Kopfleiste, die Fußzeile mit Impressum und Datenschutz bleibt sichtbar.
+
 ## [2.0.5] - 2026-11-04
 
 ### Geändert

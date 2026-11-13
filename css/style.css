@@ -6,3 +6,25 @@
 	display: block;
 }
 
+
+/* Linkseite einer einzelnen PDF: Name und „Herunterladen“ in der Kopfleiste */
+#oco-pdf-kopf {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--oco-space-3, 12px);
+	min-width: 0;
+	margin-right: var(--oco-space-3, 12px);
+}
+#oco-pdf-kopf .oco-pdf-name {
+	overflow: hidden;
+	max-width: 36ch;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+@media (max-width: 767px) {
+	#oco-pdf-kopf .oco-pdf-name,
+	#oco-pdf-kopf .oco-pdf-etikett {
+		display: none;
+	}
+}

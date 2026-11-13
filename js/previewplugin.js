@@ -57,8 +57,9 @@
 			if ($('#isPublic').val() && $('#filesApp').val()) {
 				$('#controls').removeClass('hidden');
 				$('#content').removeClass('full-height');
-				$('footer').removeClass('hidden');
 			}
+			$(window).off('resize.pdfviewer');
+			$('#oco-pdf-kopf').remove();
 
 			if (listeWirdAbgebaut !== true && this._fileList && typeof this._fileList.setViewerMode === 'function') {
 				this._fileList.setViewerMode(false);
@@ -181,11 +182,13 @@
 					height: '100%'
 				});
 				$('#content').addClass('full-height');
-				$('footer').addClass('hidden');
 				$('#imgframe').addClass('hidden');
 				$('.directLink').addClass('hidden');
 				$('.directDownload').addClass('hidden');
 				$('#controls').addClass('hidden');
+				// Name und Herunterladen wandern in die Kopfleiste, die
+				// Fußzeile (Impressum, Datenschutz) bleibt unter dem Rahmen
+				self._publicKopf($iframe, fileName);
 			} else if (document.body.classList.contains('oco-shell')) {
 				// Redesign-Schale: als absolutes Kind von #app-content lag der
 				// Rahmen unter der 64-px-Kopfleiste, und die klebende
@@ -215,6 +218,12 @@
 			// if a filelist is present, the PDF viewer can be closed to go back there
 			$('#pdframe').on("load", function () {
 				var iframe = $('#pdframe').contents();
+				if (!$('#fileList').length && $('#isPublic').val()) {
+					// Linkseite einer einzelnen Datei: die verdeckte Karte
+					// (auch der Verweis von ONLYOFFICE) bleibt aus dem Tabweg
+					self._isolate(this, document.getElementById('header'));
+					$('footer').removeAttr('inert').removeAttr('data-pdfviewer-inert');
+				}
 				if ($('#fileList').length) {
 					isPdfVisible = true;
 					history.pushState({}, '', '#pdfviewer');
@@ -289,6 +298,43 @@
 			}, 0);
 		},
 
+
+		/**
+		 * Linkseite einer einzelnen Datei: Dateiname und „Herunterladen“ in
+		 * die Kopfleiste setzen (die Karte mit ihren Knöpfen ist verdeckt) und
+		 * den Rahmen über der Fußzeile enden lassen.
+		 *
+		 * @param {jQuery} $iframe
+		 * @param {string} fileName
+		 * @private
+		 */
+		_publicKopf: function ($iframe, fileName) {
+			var $rechts = $('#header .header-right');
+			var $dl = $('.directDownload a').first();
+			if ($rechts.length && !$('#oco-pdf-kopf').length) {
+				var $kopf = $('<span id="oco-pdf-kopf"></span>');
+				$kopf.append($('<span class="oco-pdf-name"></span>').text(fileName || $('#filename').val() || ''));
+				if ($dl.length) {
+					var $knopf = $dl.clone().removeAttr('id').removeClass('hidden').addClass('oco-pdf-download');
+					// Text als Etikett: auf schmalen Schirmen bleibt nur das Symbol
+					$knopf.attr('aria-label', $.trim($dl.text()));
+					$knopf.contents().filter(function () {
+						return this.nodeType === 3 && $.trim(this.nodeValue) !== '';
+					}).wrap('<span class="oco-pdf-etikett"></span>');
+					$kopf.append($knopf);
+				}
+				$rechts.prepend($kopf);
+			}
+			var passen = function () {
+				var kopf = document.getElementById('header');
+				var fuss = document.querySelector('footer');
+				var oben = kopf ? Math.max(0, Math.round(kopf.getBoundingClientRect().bottom)) : 0;
+				var unten = fuss ? Math.round(fuss.getBoundingClientRect().height) : 0;
+				$iframe.css({ top: oben + 'px', bottom: unten + 'px', height: 'calc(100% - ' + (oben + unten) + 'px)' });
+			};
+			passen();
+			$(window).off('resize.pdfviewer').on('resize.pdfviewer', passen);
+		},
 
 		/**
 		 * Ist in pdf.js eine Ebene offen, die Escape selbst schließt? Dieselben
