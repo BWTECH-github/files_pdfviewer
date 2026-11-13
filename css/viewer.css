@@ -4,10 +4,11 @@
   display: none !important;
 }
 
-/* Dokumentfläche: Tastaturfokus sichtbar (pdf.js blendet ihn aus) */
+/* Dokumentfläche: Tastaturfokus sichtbar (pdf.js blendet ihn aus); der
+   Ring des Kerns (MASSSTAB 5), innen, weil die Fläche das Fenster füllt */
 #viewerContainer:focus-visible {
-  outline: 2px solid #0060df;
-  outline-offset: -2px;
+  outline: var(--oco-focus-width) solid var(--oco-focus-color);
+  outline-offset: var(--oco-focus-offset-feld);
 }
 #viewerContainer.oco-fokus-still:focus-visible {
   outline: none;
@@ -20,6 +21,11 @@
 @media (prefers-color-scheme: dark) {
   #findMsg {
     color: #ff9e9e;
+  }
+  /* pdf.js folgt dem dunklen Modus des Systems: auf dunklem Grund ist der
+     Fokusring weiß (MASSSTAB 5) */
+  :root {
+    --oco-focus-color: var(--oco-surface);
   }
 }
 
@@ -238,16 +244,16 @@ html .doorHangerRight:before {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #0a84ff;
-  outline-offset: 1px;
+  outline: var(--oco-focus-width) solid var(--oco-focus-color);
+  outline-offset: var(--oco-focus-offset);
 }
 
 /* Suchoptionen: Das Kästchen selbst ist unsichtbar (opacity 0), den Fokus
    zeigt die Beschriftung – auch bei gesetzter Option, deren Farbe sonst den
    Fokus-Tint überdeckt */
 .findbar input[type="checkbox"]:focus-visible + label {
-  outline: 2px solid #0a84ff;
-  outline-offset: 1px;
+  outline: var(--oco-focus-width) solid var(--oco-focus-color);
+  outline-offset: var(--oco-focus-offset);
 }
 
 /* WCAG 1.4.11 Non-Text-Kontrast: Der Ruhe-Rahmen der Eingabefelder

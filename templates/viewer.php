@@ -42,6 +42,8 @@ See https://github.com/adobe-type-tools/cmap-resources
 	<title>PDF.js viewer</title>
 
 	<link rel="stylesheet" href="<?php p($urlGenerator->linkTo('files_pdfviewer', 'js/vendor/pdfjs/web/viewer.css')) ?>?v=<?php p($version) ?>"/>
+	<!-- Design-Tokens des Kerns (Fokusring): der Rahmen lädt keine Kernstile -->
+	<link rel="stylesheet" href="<?php p($urlGenerator->linkTo('', 'core/css/owncloud-tokens.css')) ?>?v=<?php p($version) ?>"/>
 	<link rel="stylesheet" href="<?php p($urlGenerator->linkTo('files_pdfviewer', 'css/viewer.css')) ?>?v=<?php p($version) ?>"/>
 
 	<!-- This snippet is used in production (included from viewer.html) -->

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.7] - 2026-11-13
+
+### Behoben
+- PDF-Betrachter: ein einheitlicher Fokusring wie im Rest von owncloud.online (vorher zwei verschiedene Blautöne), im dunklen Modus weiß.
+
 ## [2.0.6] - 2026-11-13
 
 ### Behoben
