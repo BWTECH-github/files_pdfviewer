@@ -18,6 +18,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IURLGenerator;
 use OCP\Share\Exceptions\ShareNotFound;
@@ -30,21 +31,27 @@ class DisplayController extends Controller {
 	/** @var IManager */
 	private $shareManager;
 
+	/** @var IConfig */
+	private $config;
+
 	/**
 	 * @param string $AppName
 	 * @param IRequest $request
 	 * @param IURLGenerator $urlGenerator
 	 * @param IManager $shareManager
+	 * @param IConfig $config
 	 */
 	public function __construct(
 		$AppName,
 		IRequest $request,
 		IURLGenerator $urlGenerator,
-		IManager $shareManager
+		IManager $shareManager,
+		IConfig $config
 	) {
 		parent::__construct($AppName, $request);
 		$this->urlGenerator = $urlGenerator;
 		$this->shareManager = $shareManager;
+		$this->config = $config;
 	}
 
 	/**
@@ -65,7 +72,12 @@ class DisplayController extends Controller {
 		$policy->addAllowedFontDomain('data:');
 		$policy->addAllowedImageDomain('*');
 		$policy->addAllowedConnectDomain('blob: data:');
-		$policy->allowEvalScript(true);
+		// Kein 'unsafe-eval': workersrc.js setzt isEvalSupported=false, pdf.js
+		// braucht dann kein eval (Gegenmaßnahme zu CVE-2024-4367). Nur die
+		// Sandbox für PDF-Skripte (WebAssembly) braucht es; die gibt es nur mit
+		// files_pdfviewer.enableScripting = 'yes', wie in templates/viewer.php.
+		$enableScripting = $this->config->getSystemValue('files_pdfviewer.enableScripting', false) === 'yes';
+		$policy->allowEvalScript($enableScripting);
 		$response->setContentSecurityPolicy($policy);
 
 		return $response;

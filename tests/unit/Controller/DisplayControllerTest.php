@@ -36,6 +36,8 @@ class DisplayControllerTest extends TestCase {
 	private $controller;
 	/** @var IManager */
 	private $shareManager;
+	/** @var \OCP\IConfig|\PHPUnit\Framework\MockObject\MockObject */
+	private $config;
 
 	public function setUp(): void {
 		$this->appName = 'files_pdfviewer';
@@ -57,12 +59,15 @@ class DisplayControllerTest extends TestCase {
 			->disableOriginalConstructor()
 			->getMock();
 
+		$this->config = $this->createMock(\OCP\IConfig::class);
+
 		$this->controller = $this->getMockBuilder('\OCA\Files_PdfViewer\Controller\DisplayController')->setConstructorArgs(
 			[
 				$this->appName,
 				$this->request,
 				$this->urlGenerator,
-				$this->shareManager
+				$this->shareManager,
+				$this->config
 			]
 		)->onlyMethods(['getStorage'])->getMock();
 
@@ -79,10 +84,39 @@ class DisplayControllerTest extends TestCase {
 		$policy->addAllowedFontDomain('data:');
 		$policy->addAllowedImageDomain('*');
 		$policy->addAllowedConnectDomain('blob: data:');
-		$policy->allowEvalScript(true);
+		$policy->allowEvalScript(false);
 		$expectedResponse->setContentSecurityPolicy($policy);
 
 		$this->assertEquals($expectedResponse, $this->controller->showPdfViewer());
+	}
+
+	/**
+	 * Der Betrachter setzt isEvalSupported=false und braucht kein eval. Mit
+	 * 'unsafe-eval' würde jeder Fehler in der Reihenfolge der Schutzvorgaben
+	 * (CVE-2024-4367) sofort zu Skriptausführung im Ursprung der Instanz.
+	 */
+	public function testShowPdfViewerForbidsEval() {
+		$this->config->method('getSystemValue')
+			->with('files_pdfviewer.enableScripting', false)
+			->willReturn(false);
+
+		$csp = $this->controller->showPdfViewer()->getContentSecurityPolicy()->buildPolicy();
+
+		$this->assertStringNotContainsString('unsafe-eval', $csp);
+	}
+
+	/**
+	 * Nur wer PDF-Skripte ausdrücklich einschaltet, bekommt die Sandbox von
+	 * pdf.js (WebAssembly), und die braucht eval.
+	 */
+	public function testShowPdfViewerAllowsEvalOnlyForScripting() {
+		$this->config->method('getSystemValue')
+			->with('files_pdfviewer.enableScripting', false)
+			->willReturn('yes');
+
+		$csp = $this->controller->showPdfViewer()->getContentSecurityPolicy()->buildPolicy();
+
+		$this->assertStringContainsString("'unsafe-eval'", $csp);
 	}
 
 	/**
