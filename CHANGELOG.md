@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.8] - 2026-11-25
+
+### Behoben
+- PDF-Betrachter: Die Zoomauswahl zeigt beim Tabben einen Fokusring; vorher lag er unsichtbar außerhalb ihres Kastens. Im Werkzeugmenü liegt der Ring innen und wird an den Seiten nicht mehr abgeschnitten.
+
 ## [2.0.7] - 2026-11-13
 
 ### Behoben

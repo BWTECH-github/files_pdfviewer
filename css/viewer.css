@@ -237,7 +237,6 @@ html .doorHangerRight:before {
 .toolbarButton:focus-visible,
 .secondaryToolbarButton:focus-visible,
 .overlayButton:focus-visible,
-.dropdownToolbarButton:focus-visible,
 .treeItemToggler:focus-visible,
 .toolbarField:focus-visible,
 #password:focus-visible,
@@ -246,6 +245,26 @@ input:focus-visible,
 select:focus-visible {
   outline: var(--oco-focus-width) solid var(--oco-focus-color);
   outline-offset: var(--oco-focus-offset);
+}
+
+/* Zoomauswahl: pdf.js macht die Auswahl breiter als ihren Kasten (so
+   verschwindet der Pfeil des Browsers) und beschneidet sie dort
+   (overflow: hidden). Ihr Ring lag ganz außerhalb des Kastens und war
+   unsichtbar; nur die Fläche wechselte kaum merklich den Ton. Den Ring trägt
+   der sichtbare Kasten. */
+.dropdownToolbarButton:has(> select:focus-visible) {
+  outline: var(--oco-focus-width) solid var(--oco-focus-color);
+  outline-offset: var(--oco-focus-offset);
+}
+.dropdownToolbarButton > select:focus-visible {
+  outline: none;
+}
+
+/* Einträge im Werkzeugmenü füllen ihre rollende Liste (overflow-y: auto)
+   von Rand zu Rand: ein Ring außen wurde links und rechts abgeschnitten.
+   Er liegt innen wie in beschneidenden Karten. */
+.secondaryToolbarButton:focus-visible {
+  outline-offset: var(--oco-focus-offset-feld);
 }
 
 /* Suchoptionen: Das Kästchen selbst ist unsichtbar (opacity 0), den Fokus
