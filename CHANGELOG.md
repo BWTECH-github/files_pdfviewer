@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.9] - 2026-11-25
+
+### Behoben
+- PDF-Betrachter: Der Fokusring in den Werkzeugleisten liegt innen und wird am Rand des Rahmens nicht mehr abgeschnitten (oben bei jedem Knopf, an den Enden auch seitlich), auch an der Zoomauswahl.
+
 ## [2.0.8] - 2026-11-25
 
 ### Behoben

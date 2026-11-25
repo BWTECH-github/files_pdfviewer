@@ -267,6 +267,17 @@ select:focus-visible {
   outline-offset: var(--oco-focus-offset-feld);
 }
 
+/* Die Werkzeugleisten liegen am Rand des Rahmens: oben die Hauptleiste und
+   die der Seitenleiste, links und rechts deren erste und letzte Knöpfe. Ein
+   Ring außen (Versatz 2 px) wurde dort abgeschnitten, oben bei jedem Halt
+   der Leiste. In den Leisten liegt er innen wie im Werkzeugmenü. */
+#toolbarContainer .toolbarButton:focus-visible,
+#toolbarContainer .toolbarField:focus-visible,
+#toolbarContainer .dropdownToolbarButton:has(> select:focus-visible),
+#toolbarSidebar .toolbarButton:focus-visible {
+  outline-offset: var(--oco-focus-offset-feld);
+}
+
 /* Suchoptionen: Das Kästchen selbst ist unsichtbar (opacity 0), den Fokus
    zeigt die Beschriftung – auch bei gesetzter Option, deren Farbe sonst den
    Fokus-Tint überdeckt */
