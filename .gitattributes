@@ -1,0 +1,15 @@
+# Nicht ins Paket (git archive)
+/.bowerrc export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/.phan export-ignore
+/.php-cs-fixer.dist.php export-ignore
+/CONTRIBUTING.md export-ignore
+/Makefile export-ignore
+/bower.json export-ignore
+/dependabot.yml export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml export-ignore
+/tests export-ignore
+/vendor-bin export-ignore
