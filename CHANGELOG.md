@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.10] - 2026-11-25
+
+### Behoben
+- PDF-Betrachter: Seitenzahl und Zoomauswahl sind sichtbar beschriftet („Seite“, „Zoom“).
+- PDF-Betrachter: Der Fokusring der Dokumentfläche erscheint sofort und ganz innerhalb des Rahmens.
+
 ## [2.0.9] - 2026-11-25
 
 ### Behoben

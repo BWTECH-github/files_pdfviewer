@@ -14,6 +14,40 @@
   outline: none;
 }
 
+/* pdf.js lässt an der Dokumentfläche alle Eigenschaften übergehen
+   (transition-duration ohne transition-property, 200 ms). Der Fokusring
+   wuchs dadurch erst heran: kurz nach dem Tab lag er bei −1 px Versatz,
+   sein äußeres Pixel am Rand des Rahmens außerhalb. Übergehen darf nur die
+   Lage beim Ein- und Ausklappen der Seitenleiste; der Ring erscheint sofort
+   (MASSSTAB 5). */
+#viewerContainer:not(.pdfPresentationMode) {
+  transition-property: left, right;
+}
+
+/* Sichtbare Beschriftungen von Seitenzahl und Zoomauswahl (WCAG 3.3.2):
+   „Seite [1] von 12“ und „Zoom [Seitenbreite]“, in der Schrift der
+   Seitenangabe von pdf.js und dicht am Feld wie „von 12“ */
+html[dir="ltr"] #pageNumberLabel.toolbarLabel,
+html[dir="ltr"] #scaleSelectLabel.toolbarLabel {
+  padding-right: 3px;
+}
+html[dir="rtl"] #pageNumberLabel.toolbarLabel,
+html[dir="rtl"] #scaleSelectLabel.toolbarLabel {
+  padding-left: 3px;
+}
+/* Mit offener Seitenleiste fehlt der Leiste deren Breite; ohne den Abstand
+   hinter dem Seitenleisten-Knopf bleibt die Mitte frei von der Seitenangabe */
+#outerContainer.sidebarOpen #toolbarViewerLeft .toolbarButtonSpacer {
+  width: 0;
+}
+/* Schmal blendet pdf.js die Zoomauswahl aus (viewer.css, max-width: 535px),
+   ihre Beschriftung geht mit */
+@media all and (max-width: 535px) {
+  #scaleSelectLabel {
+    display: none;
+  }
+}
+
 /* „Nicht gefunden“ der Suchleiste mit ausreichendem Kontrast (WCAG 1.4.3) */
 #findMsg {
   color: #c50000;

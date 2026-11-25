@@ -232,6 +232,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 								<span data-l10n-id="next_label">Next</span>
 							</button>
 						</div>
+						<label id="pageNumberLabel" class="toolbarLabel" for="pageNumber"><?php p($l->t('Page'))?></label>
 						<input type="number" id="pageNumber" class="toolbarField pageNumber" title="Page" value="1" size="4" min="1" tabindex="15" data-l10n-id="page" autocomplete="off">
 						<span id="numPages" class="toolbarLabel"></span>
 					</div>
@@ -277,6 +278,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 								<span data-l10n-id="zoom_in_label">Zoom In</span>
 							</button>
 						</div>
+						<label id="scaleSelectLabel" class="toolbarLabel" for="scaleSelect"><?php p($l->t('Zoom'))?></label>
 						<span id="scaleSelectContainer" class="dropdownToolbarButton">
                   <select id="scaleSelect" title="Zoom" tabindex="23" data-l10n-id="zoom">
                     <option id="pageAutoOption" title="" value="auto" selected="selected" data-l10n-id="page_scale_auto">Automatic Zoom</option>
